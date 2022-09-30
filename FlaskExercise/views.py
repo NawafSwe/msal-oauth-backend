@@ -21,7 +21,6 @@ def login():
     session["state"] = str(uuid.uuid4())
     # Note: Below will return None as an auth_url until you implement the function
     auth_url = _build_auth_url(scopes=Config.SCOPE, state=session["state"])
-    print("auth_url==> {}".format(auth_url))
     return render_template("login.html", title="Sign In", auth_url=auth_url)
 
 
@@ -30,11 +29,10 @@ def logout():
     logout_user()  # Log out of Flask session
     if session.get("user"):  # Used MS Login
         # Wipe out user and its token cache from session
+        user = session.get("user")
         session.clear()
-        # TODO: Also logout from your tenant's web session
-        #   And make sure to redirect from there back to the login page
-        pass
-
+        # And make sure to redirect from there back to the login page
+        _logout(user)
     return redirect(url_for("login"))
 
 
@@ -44,7 +42,6 @@ def logout():
 def authorized():
     if request.args.get("state") != session.get("state"):
         return redirect(url_for("home"))  # Failed, go back home
-    print("state ok")
     if "error" in request.args:  # Authentication/Authorization failure
         return render_template("auth_error.html", result=request.args)
 
@@ -92,7 +89,6 @@ def _build_msal_app(cache=None, authority=None):
 
 
 def _build_auth_url(authority=None, scopes=None, state=None):
-    print("http://localhost:6700" + Config.REDIRECT_PATH)
     return msal_app.get_authorization_request_url(
         scopes=scopes,
         state=state,
@@ -106,6 +102,11 @@ def _acquire_token_by_authorization_code(code, scopes, redirect_uri=None):
         scopes=scopes,
         redirect_uri="http://localhost:6700" + Config.REDIRECT_PATH,
     )
+
+
+def _logout(user):
+    cache = msal.SerializableTokenCache()
+    cache.modify("IdToken", user)
 
 
 # building msal app
