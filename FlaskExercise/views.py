@@ -106,6 +106,7 @@ def _acquire_token_by_authorization_code(code, scopes, redirect_uri=None):
 
 def _logout(user):
     cache = msal.SerializableTokenCache()
+    # invalidate idToken
     cache.modify("IdToken", user)
 
 
