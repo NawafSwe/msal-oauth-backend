@@ -18,15 +18,9 @@ env/
 .coverage.*
 htmlcov/
 logs/
-.pytest_cache/
-fsettings
-rank_data
-celerybeat.pid
-celerybeat-schedule
-/.scannerwork/
-.devcontainer
 /test-coverage.xml
 /test-results.xml
 .env
 .noseids
 secrets/
+flask_session
