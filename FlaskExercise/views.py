@@ -29,11 +29,15 @@ def logout():
     logout_user()  # Log out of Flask session
     if session.get("user"):  # Used MS Login
         # Wipe out user and its token cache from session
-        user = session.get("user")
         session.clear()
+
         # And make sure to redirect from there back to the login page
-        _logout(user)
-    return redirect(url_for("login"))
+        return redirect(
+            Config.AUTHORITY
+            + "/oauth2/v2.0/logout?post_logout_redirect_uri="
+            + url_for("login", _external=True),
+        )
+    return redirect("login")
 
 
 @app.route(
@@ -49,7 +53,9 @@ def authorized():
         cache = _load_cache()
         # acquire token from code
         result = _acquire_token_by_authorization_code(
-            code=request.args.get("code"), scopes=Config.SCOPE
+            code=request.args.get("code"),
+            scopes=Config.SCOPE,
+            cache=cache,
         )
         if "error" in result:
             return render_template("auth_error.html", result=result)
@@ -89,26 +95,27 @@ def _build_msal_app(cache=None, authority=None):
 
 
 def _build_auth_url(authority=None, scopes=None, state=None):
-    return msal_app.get_authorization_request_url(
+    return _build_msal_app(
+        authority=authority or Config.AUTHORITY
+    ).get_authorization_request_url(
         scopes=scopes,
-        state=state,
+        state=state or str(uuid.uuid4()),
         redirect_uri="http://localhost:6700" + Config.REDIRECT_PATH,
     )
 
 
-def _acquire_token_by_authorization_code(code, scopes, redirect_uri=None):
-    return msal_app.acquire_token_by_authorization_code(
+def _acquire_token_by_authorization_code(code, scopes, cache=None, redirect_uri=None):
+    return _build_msal_app(
+        authority=Config.AUTHORITY,
+        cache=cache,
+    ).acquire_token_by_authorization_code(
         code=code,
         scopes=scopes,
         redirect_uri="http://localhost:6700" + Config.REDIRECT_PATH,
     )
 
 
-def _logout(user):
-    cache = msal.SerializableTokenCache()
-    # invalidate idToken
-    cache.modify("IdToken", user)
-
-
-# building msal app
-msal_app = _build_msal_app(authority=Config.AUTHORITY)
+# def _logout(user):
+#     cache = msal.SerializableTokenCache()
+#     # invalidate idToken
+#     cache.modify("IdToken", user)
